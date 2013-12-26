@@ -1,0 +1,50 @@
+ 
+ #!/usr/bin/perl
+use Data::Dumper;
+
+%lookup_cache = ();
+
+sub valid_address {
+  my($addr) = @_;
+  my($domain, $valid);
+
+  # Lower-case address
+  $addr = lc($addr);
+
+  # Validate format of address
+  return(0) unless ($addr =~ /^[^@]+@([-\w]+\.)+[a-z]{2,4}$/);
+
+  # Grab domain
+  $domain = (split(/@/, $addr))[1];
+
+  # Lookup and return cached result if it exists
+  $cached_result = $lookup_cache{$domain};
+  if ($cached_result ne '')
+  {
+    #print "[cached_result] ";
+    return $cached_result;
+  }
+
+  # Do domain lookup
+  $valid = 0;
+  if (open(DNS, "nslookup -q=any $domain |"))
+  {
+    while (<DNS>) {
+      $valid = 1 if (/^$domain.*\s(mail exchanger|internet address)\s=/i);
+    }
+  }
+
+  # Store cached result for later
+  $lookup_cache{$domain} = $valid;
+
+  return $valid;
+}
+
+while (<>) {
+  $addy = $_;
+  $addy =~ s/\s+$//;
+  if ($addy)
+  {
+    print "$addy " . (valid_address($addy) ? 'valid' : 'invalid') . "\n";
+  }
+}
